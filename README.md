@@ -1,27 +1,20 @@
-![loom](https://user-images.githubusercontent.com/18274298/100971031-85616680-3579-11eb-83da-a240bb236200.jpg)
+![papago-srt](https://github.com/fantakim/PapagoSrt/assets/18274298/f2eafbf3-b7a7-43e9-8965-34b26c91436c)
 
-# Loom
+# Papago Translation App
 
-> Loom is a solution for chatting about real-time issues.
+This is a .NET Core WinForms application designed for translating multiple SRT files using the Papago translation service. The app utilizes the Selenium library to perform web scraping of the translated results.
 
-## Setting up the development environment on Mac
+## Features
 
-Pull the Azure SQL Edge container image from Microsoft Container Registry.
+- Translate multiple SRT files: The app allows you to select and translate multiple SRT files simultaneously.
+- No Papago API key required: Unlike other translation apps, this application does not require a Papago API key for translation.
+- Web scraping with Selenium: The translated results are obtained by scraping the Papago website using the Selenium library.
 
-```console
-sudo docker pull mcr.microsoft.com/azure-sql-edge:latest
-```
+## Requirements
 
-Start an Azure SQL Edge instance running
+- Google Chrome
+- .NET Core: Make sure you have .NET Core installed on your system.
 
-```console
-docker run --cap-add SYS_PTRACE -e 'ACCEPT_EULA=1' -e 'MSSQL_SA_PASSWORD=Pa$$w0rd' -p 1433:1433 --name mssql -d mcr.microsoft.com/azure-sql-edge
-```
+## Disclaimer
 
-Connection string for sqlserver in Docker container
-
-```json
-"ConnectionStrings": {
-  "DefaultConnection": "Server=localhost;Initial Catalog=Loom;User Id=sa;Password=Pa$$w0rd;MultipleActiveResultSets=true;Encrypt=True;TrustServerCertificate=True;"
-}
-```
+This application is provided as-is, without any warranty or guarantee of any kind. The developers of this application are not responsible for any loss or damage caused by its use. Use this application at your own risk.
