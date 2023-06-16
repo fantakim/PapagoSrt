@@ -29,15 +29,16 @@ namespace PapagoSrt
         {
             driver.Navigate().GoToUrl("https://papago-subtitle.netlify.app");
 
-            driver.FindElement(By.LinkText("파파고 번역 사이트")).Click();
+            driver.WaitForFindElement(By.LinkText("파파고 번역 사이트")).Click();
 
-            driver.SwitchTo().Frame("translatedFrame");
+            var frame = driver.WaitForFindElement(By.Id("translatedFrame"));
+            driver.SwitchTo().Frame(frame);
 
-            var textarea = driver.FindElement(By.Id("mat-input-0"));
+            var textarea = driver.WaitForFindElement(By.Id("mat-input-0"));
             textarea.Clear();
             textarea.SendKeys(Keys.Control + "v");
 
-            var saveButton = driver.FindElement(By.XPath("/html/body/app-root/div/section[1]/button"));
+            var saveButton = driver.WaitForFindElement(By.XPath("/html/body/app-root/div/section[1]/button"));
             saveButton.Click();
 
             var elements = driver.FindElements(By.XPath("//*[@papago-id]"));
@@ -48,8 +49,22 @@ namespace PapagoSrt
             var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(100));
             wait.Until(d => lastElement.GetAttribute("papago-translate") == "translated");
 
-            var result = driver.FindElement(By.ClassName("result"));
+            var result = driver.WaitForFindElement(By.ClassName("result"));
             return result.Text;
+        }
+    }
+
+    public static class WebDriverExtensions
+    {
+        public static IWebElement WaitForFindElement(this IWebDriver driver, By by, int timeoutInSeconds = 5)
+        {
+            var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(timeoutInSeconds));
+            if (wait.Until(x => x.FindElement(by).Displayed))
+            {
+                return driver.FindElement(by);
+            }
+
+            return null;
         }
     }
 }
