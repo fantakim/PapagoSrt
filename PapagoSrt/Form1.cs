@@ -78,7 +78,7 @@ namespace PapagoSrt
 
             if (string.IsNullOrWhiteSpace(folder) && !isSameFolder)
             {
-                MessageBox.Show("저장 폴더가 지정되지 않았습니다.", "오류", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("저장 폴더가 지정되지 않았습니다.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
@@ -110,6 +110,8 @@ namespace PapagoSrt
 
                     task.SetStatus(TaskStatus.Success);
                 }
+
+                MessageBox.Show("작업이 완료 되었습니다", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
@@ -121,8 +123,6 @@ namespace PapagoSrt
                 RestoreClipboard(backup);
                 btnStart.Enabled = true;
             }
-
-            MessageBox.Show("작업이 완료 되었습니다", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private string previousFolderText;
