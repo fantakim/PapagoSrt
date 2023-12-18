@@ -27,7 +27,7 @@ namespace PapagoSrt
 
         public static string Translate(ChromeDriver driver)
         {
-            driver.Navigate().GoToUrl("https://papago-subtitle.netlify.app");
+            driver.Navigate().GoToUrl("https://main--venerable-zabaione-67b63d.netlify.app");
 
             driver.WaitForFindElement(By.LinkText("파파고 번역 사이트")).Click();
 
