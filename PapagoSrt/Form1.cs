@@ -71,7 +71,7 @@ namespace PapagoSrt
             }
         }
 
-        private void btnStart_Click(object sender, EventArgs e)
+        private async void btnStart_Click(object sender, EventArgs e)
         {
             var folder = txtFolder.Text;
             var isSameFolder = cbxSameFolder.Checked;
@@ -86,43 +86,38 @@ namespace PapagoSrt
             if (pendingTasks.Count == 0)
                 return;
 
-            var driver = Papago.CreateChromeDriver();
-            var backup = BackupClipboard();
-
             btnStart.Enabled = false;
 
-            try
+            var backup = BackupClipboard();
+            using (var driver = Papago.CreateChromeDriver())
             {
-                foreach (var task in pendingTasks)
+                await System.Threading.Tasks.Task.Run(() =>
                 {
-                    var content = File.ReadAllText(task.Filename);
-                    Clipboard.SetText(content);
-
-                    var translated = Papago.Translate(driver);
-                    if (translated.Length == 0)
+                    foreach (var task in pendingTasks)
                     {
-                        task.SetStatus(TaskStatus.Failure);
-                        continue;
+                        var content = File.ReadAllText(task.Filename);
+
+                        SetTextClipboard(content);
+
+                        var translated = Papago.Translate(driver);
+                        if (translated.Length == 0)
+                        {
+                            task.SetStatus(TaskStatus.Failure);
+                            continue;
+                        }
+
+                        var saveFilename = isSameFolder ? AddSuffixToFileName(task.Filename, "-kr") : Path.Combine(folder, Path.GetFileName(task.Filename));
+                        File.WriteAllText(saveFilename, translated);
+
+                        task.SetStatus(TaskStatus.Success);
                     }
-
-                    var saveFilename = isSameFolder ? AddSuffixToFileName(task.Filename, "-kr") : Path.Combine(folder, Path.GetFileName(task.Filename));
-                    File.WriteAllText(saveFilename, translated);
-
-                    task.SetStatus(TaskStatus.Success);
-                }
-
-                MessageBox.Show("작업이 완료 되었습니다", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                });
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            finally
-            {
-                driver.Close();
-                RestoreClipboard(backup);
-                btnStart.Enabled = true;
-            }
+
+            RestoreClipboard(backup);
+            MessageBox.Show("작업이 완료 되었습니다", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+            btnStart.Enabled = true;
         }
 
         private string previousFolderText;
@@ -181,6 +176,18 @@ namespace PapagoSrt
             }
 
             return backup;
+        }
+
+        private void SetTextClipboard(string text)
+        {
+            var thread = new Thread(new ThreadStart(() =>
+            {
+                Clipboard.SetText(text);
+            }));
+
+            thread.SetApartmentState(ApartmentState.STA);
+            thread.Start();
+            thread.Join();
         }
 
         private void RestoreClipboard(Dictionary<string, object> backup)
