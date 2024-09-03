@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
+using System.Text;
 
 namespace PapagoSrt
 {
@@ -88,18 +89,14 @@ namespace PapagoSrt
 
             btnStart.Enabled = false;
 
-            var backup = BackupClipboard();
             using (var driver = Papago.CreateChromeDriver())
             {
                 await System.Threading.Tasks.Task.Run(() =>
                 {
                     foreach (var task in pendingTasks)
                     {
-                        var content = File.ReadAllText(task.Filename);
-
-                        SetTextClipboard(content);
-
-                        var translated = Papago.Translate(driver);
+                        var contents = GetSrtChunks(task.Filename);
+                        var translated = Papago.Translate(driver, contents);
                         if (translated.Length == 0)
                         {
                             task.SetStatus(TaskStatus.Failure);
@@ -114,7 +111,6 @@ namespace PapagoSrt
                 });
             }
 
-            RestoreClipboard(backup);
             MessageBox.Show("작업이 완료 되었습니다", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
             btnStart.Enabled = true;
@@ -165,39 +161,51 @@ namespace PapagoSrt
             return Path.Combine(directory, $"{fileName}{suffix}{extension}");
         }
 
-        private Dictionary<string, object> BackupClipboard()
+        private static List<string> GetSrtChunks(string filePath, int maxCharacters = 3000)
         {
-            var backup = new Dictionary<string, object>();
-            var dataObject = Clipboard.GetDataObject();
-            var formats = dataObject.GetFormats(false);
-            foreach (var format in formats)
+            var result = new List<string>();
+            var currentChunk = new StringBuilder();
+
+            using (var reader = new StreamReader(filePath, Encoding.UTF8))
             {
-                backup.Add(format, dataObject.GetData(format, false));
+                var line = string.Empty;
+                while ((line = reader.ReadLine()) != null)
+                {
+                    if (currentChunk.Length + line.Length > maxCharacters)
+                    {
+                        if (currentChunk.Length > 0)
+                        {
+                            result.Add(currentChunk.ToString().TrimEnd());
+                            currentChunk.Clear();
+                        }
+
+                        if (line.Length > maxCharacters)
+                        {
+                            int lastNewLineIndex = line.LastIndexOf('\n', maxCharacters);
+                            if (lastNewLineIndex == -1)
+                            {
+                                lastNewLineIndex = maxCharacters;
+                            }
+                            result.Add(line.Substring(0, lastNewLineIndex).TrimEnd());
+                        }
+                        else
+                        {
+                            currentChunk.Append(line + "\n");
+                        }
+                    }
+                    else
+                    {
+                        currentChunk.Append(line + "\n");
+                    }
+                }
+
+                if (currentChunk.Length > 0)
+                {
+                    result.Add(currentChunk.ToString().TrimEnd());
+                }
             }
 
-            return backup;
-        }
-
-        private void SetTextClipboard(string text)
-        {
-            var thread = new Thread(new ThreadStart(() =>
-            {
-                Clipboard.SetText(text);
-            }));
-
-            thread.SetApartmentState(ApartmentState.STA);
-            thread.Start();
-            thread.Join();
-        }
-
-        private void RestoreClipboard(Dictionary<string, object> backup)
-        {
-            Clipboard.Clear();
-
-            backup.ToList().ForEach(x =>
-            {
-                Clipboard.SetData(x.Key, x.Value);
-            });
+            return result;
         }
     }
 }

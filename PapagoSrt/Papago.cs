@@ -1,7 +1,8 @@
 ﻿using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Support.UI;
-using Keys = OpenQA.Selenium.Keys;
+using SeleniumExtras.WaitHelpers;
+using System.Text;
 
 namespace PapagoSrt
 {
@@ -25,46 +26,37 @@ namespace PapagoSrt
             return driver;
         }
 
-        public static string Translate(ChromeDriver driver)
+        public static string Translate(ChromeDriver driver, IList<string> contents)
         {
-            driver.Navigate().GoToUrl("https://main--venerable-zabaione-67b63d.netlify.app");
+            driver.Navigate().GoToUrl($"https://papago.naver.com/?sk=auto&tk=ko");
 
-            driver.WaitForFindElement(By.LinkText("파파고 번역 사이트")).Click();
-
-            var frame = driver.WaitForFindElement(By.Id("translatedFrame"));
-            driver.SwitchTo().Frame(frame);
-
-            var textarea = driver.WaitForFindElement(By.Id("mat-input-0"));
-            textarea.Clear();
-            textarea.SendKeys(Keys.Control + "v");
-
-            var saveButton = driver.WaitForFindElement(By.XPath("/html/body/app-root/div/section[1]/button"));
-            saveButton.Click();
-
-            var elements = driver.FindElements(By.XPath("//*[@papago-id]"));
-            var lastElement = elements.LastOrDefault();
-            if (lastElement == null)
-                return string.Empty;
-
-            var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(100));
-            wait.Until(d => lastElement.GetAttribute("papago-translate") == "translated");
-
-            var result = driver.WaitForFindElement(By.ClassName("result"));
-            return result.Text;
-        }
-    }
-
-    public static class WebDriverExtensions
-    {
-        public static IWebElement WaitForFindElement(this IWebDriver driver, By by, int timeoutInSeconds = 5)
-        {
-            var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(timeoutInSeconds));
-            if (wait.Until(x => x.FindElement(by).Displayed))
+            try
             {
-                return driver.FindElement(by);
+                var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(15));
+                wait.Until(ExpectedConditions.ElementIsVisible(By.Id("btnTranslate")));
+            }
+            catch
+            {
+                throw new Exception("Webpage Timed out!");
             }
 
-            return null;
+            var sourceTextbox = driver.FindElement(By.Id("txtSource"));
+            var targetTextbox = driver.FindElement(By.Id("txtTarget"));
+
+            var translatedText = new StringBuilder();
+            foreach (var content in contents)
+            {
+                var script = $"var ele = `{content.Replace("`", "\\`")}`;document.getElementById('txtSource').value=ele;";
+                ((IJavaScriptExecutor)driver).ExecuteScript(script);
+                sourceTextbox.SendKeys(" ");
+
+                Thread.Sleep(2000);
+
+                var translated = targetTextbox.Text;
+                translatedText.Append(translated);
+            }
+            
+            return translatedText.ToString();
         }
     }
 }
