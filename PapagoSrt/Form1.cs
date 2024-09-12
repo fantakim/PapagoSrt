@@ -1,7 +1,6 @@
 using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
-using System.Text;
 
 namespace PapagoSrt
 {
@@ -89,27 +88,25 @@ namespace PapagoSrt
 
             btnStart.Enabled = false;
 
-            using (var driver = Papago.CreateChromeDriver())
+            await System.Threading.Tasks.Task.Run(() =>
             {
-                await System.Threading.Tasks.Task.Run(() =>
+                SrtTranslator.Initialize();
+                try
                 {
                     foreach (var task in pendingTasks)
                     {
-                        var contents = GetSrtChunks(task.Filename);
-                        var translated = Papago.Translate(driver, contents);
-                        if (translated.Length == 0)
-                        {
-                            task.SetStatus(TaskStatus.Failure);
-                            continue;
-                        }
-
-                        var saveFilename = isSameFolder ? AddSuffixToFileName(task.Filename, "-kr") : Path.Combine(folder, Path.GetFileName(task.Filename));
-                        File.WriteAllText(saveFilename, translated);
+                        var sourceFile = task.Filename;
+                        var targetFile = isSameFolder ? AddSuffixToFileName(task.Filename, "-kr") : Path.Combine(folder, Path.GetFileName(task.Filename));
+                        SrtTranslator.Run(task.Filename, targetFile);
 
                         task.SetStatus(TaskStatus.Success);
                     }
-                });
-            }
+                }
+                finally
+                {
+                    SrtTranslator.Cleanup();
+                }
+            });
 
             MessageBox.Show("작업이 완료 되었습니다", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
@@ -159,53 +156,6 @@ namespace PapagoSrt
             var extension = Path.GetExtension(filePath);
 
             return Path.Combine(directory, $"{fileName}{suffix}{extension}");
-        }
-
-        private static List<string> GetSrtChunks(string filePath, int maxCharacters = 3000)
-        {
-            var result = new List<string>();
-            var currentChunk = new StringBuilder();
-
-            using (var reader = new StreamReader(filePath, Encoding.UTF8))
-            {
-                var line = string.Empty;
-                while ((line = reader.ReadLine()) != null)
-                {
-                    if (currentChunk.Length + line.Length > maxCharacters)
-                    {
-                        if (currentChunk.Length > 0)
-                        {
-                            result.Add(currentChunk.ToString().TrimEnd());
-                            currentChunk.Clear();
-                        }
-
-                        if (line.Length > maxCharacters)
-                        {
-                            int lastNewLineIndex = line.LastIndexOf('\n', maxCharacters);
-                            if (lastNewLineIndex == -1)
-                            {
-                                lastNewLineIndex = maxCharacters;
-                            }
-                            result.Add(line.Substring(0, lastNewLineIndex).TrimEnd());
-                        }
-                        else
-                        {
-                            currentChunk.Append(line + "\n");
-                        }
-                    }
-                    else
-                    {
-                        currentChunk.Append(line + "\n");
-                    }
-                }
-
-                if (currentChunk.Length > 0)
-                {
-                    result.Add(currentChunk.ToString().TrimEnd());
-                }
-            }
-
-            return result;
         }
     }
 }
