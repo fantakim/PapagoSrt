@@ -27,7 +27,7 @@ namespace PapagoSrt
             ((IJavaScriptExecutor)_driver).ExecuteScript(script);
             sourceTextbox.SendKeys(" ");
 
-            Thread.Sleep(1000);
+            Thread.Sleep(3000);
 
             var translated = targetTextbox.Text;
             translatedText.Append(translated);
