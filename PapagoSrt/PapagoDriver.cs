@@ -27,12 +27,40 @@ namespace PapagoSrt
             ((IJavaScriptExecutor)_driver).ExecuteScript(script);
             sourceTextbox.SendKeys(" ");
 
-            Thread.Sleep(3000);
-
-            var translated = targetTextbox.Text;
+            var translated = WaitForTranslationComplete(targetTextbox);
             translatedText.Append(translated);
 
             return translatedText.ToString();
+        }
+
+        private string WaitForTranslationComplete(IWebElement targetTextbox)
+        {
+            const int checkIntervalMs = 500;
+            const int stableWaitMs = 1000;
+            const int maxWaitMs = 15000;
+
+            var startTime = DateTime.Now;
+            var lastText = "";
+            var lastChangeTime = DateTime.Now;
+
+            while ((DateTime.Now - startTime).TotalMilliseconds < maxWaitMs)
+            {
+                var currentText = targetTextbox.Text;
+                
+                if (currentText != lastText)
+                {
+                    lastText = currentText;
+                    lastChangeTime = DateTime.Now;
+                }
+                else if (!string.IsNullOrEmpty(currentText) && (DateTime.Now - lastChangeTime).TotalMilliseconds >= stableWaitMs)
+                {
+                    return currentText;
+                }
+
+                Thread.Sleep(checkIntervalMs);
+            }
+
+            return lastText;
         }
 
         private ChromeDriver CreateChromeDriver()
